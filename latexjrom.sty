@@ -14,7 +14,7 @@
 \usepackage{hyperref}
 \usepackage{amsmath}
 
-\newcommand{\codi}[1]{\small\texttt{{#1}}}
+\newcommand{\codi}[1]{\small{\texttt{{#1}}}\normalsize}
 
 \lstset{
   basicstyle=\footnotesize\ttfamily,
@@ -57,6 +57,16 @@
     \caption{{#2}}\label{fig:{#1}}
     \begin{center}
       \includegraphics[width=120mm]{{#1}}
+    \end{center}
+  \end{figure}
+}
+
+\newcommand{\imatgepetita}[2]
+{
+  \begin{figure}[ht]
+    \caption{{#2}}\label{fig:{#1}}
+    \begin{center}
+      \includegraphics[width=80mm]{{#1}}
     \end{center}
   \end{figure}
 }

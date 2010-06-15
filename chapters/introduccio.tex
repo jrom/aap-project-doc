@@ -1,1 +1,17 @@
 %!TEX root = ../document.tex
+
+Aquest projecte consta d'optimitzar una aplicació que té com a objectiu principal buscar \textbf{acoblaments rígids entre parells de biomolècules}. Aquest algorisme es basa en aplicar transformacions de Fourier mitjançant la llibrería \textbf{FFTW}.
+
+L'objectiu del projecte és reduir el temps d'execució real (a partir d'ara \emph{elapsed time}) entre dos punts concrets del codi. Aquests són al voltant del codi que efectua les següents tasques:
+
+\begin{itemize}
+  \item Llegir les estructures mol·leculars dels fitxers d'entrada
+  \item Carregar a la memòria aquestes estructures
+  \item Calcular la graella que representarà l'espai
+  \item Crear els plans per a les transformacions de Fourier
+  \item Calcular el camp elèctric en cada punt de la graella
+\end{itemize}
+
+Posteriorment a això, el programa originalment prova d'encaixar en totes les posicions possibles les dues mol·lècules, però per reduir el temps d'execució es va simplificar.
+
+Concretament, com veurem a continuació, el gruix de l'elapsed time es perd en el càlcul del camp elèctric per a tota la graella tridimensional. Aquest el que fa és recórrer una matriu de tres dimensions i a cada punt calcular la suma de camps electrics respecte cadascun dels àtoms de cada una de les mol·lècules d'entrada. Com es pot observar, es tracta d'una operació realitzada dins d'un bucle de 5 nivells.

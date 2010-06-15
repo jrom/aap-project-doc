@@ -1,1 +1,74 @@
 %!TEX root = ../document.tex
+
+Després de compilar la llibrería \textbf{FFTW} i el programa principal (\textbf{3D\_Dock}) ens disposem a analitzar el comportament d'aquest a partir de \emph{profiling}.
+
+La primera conclusió que treiem és immediata: hi ha dos grans funcions que ocupen juntes la major part de l'\emph{elapsed time}:
+
+\begin{itemize}
+  \item \codi{electric\_field} 48.3 \%
+  \item \codi{pythagoras} 26.5 \%
+\end{itemize}
+
+A continuació es pot observar com aquesta distribució marca condundentment el nostre principal objectiu a optimitzar.
+
+\imatgepetita{img/profiling.png}{Distribució del l'elapsed time en crides a funcions}
+
+Observant el codi, s'aprecia que la funció \codi{pythagoras} es crida des d'\codi{electric\_field}, per tant tenim que el 75\% del temps d'execució s'ocupa calculant el camp electric en cada punt d'aquesta graella.
+
+El codi de la funció \codi{electric\_field} és prou senzill com per mostrar-lo (simplificat) a continuació:
+
+\begin{lstlisting}[label=ef0, caption=Codi original d'electric\_field, language=C]
+/* Inicialitzacions */
+
+for( x = 0 ; x < grid_size ; x ++ )
+  for( y = 0 ; y < grid_size ; y ++ )
+    for( z = 0 ; z < grid_size ; z ++ )
+    {
+      phi = 0 ;
+      for(residue = 1 ; residue <= This_Structure.length; residue++)
+      {
+        for(atom=1; atom <= This_Structure.Residue[residue].size; atom++)
+        {
+          if(This_Structure.Residue[residue].Atom[atom].charge != 0)
+          {
+            distance = pythagoras(
+              This_Structure.Residue[residue].Atom[atom].coord[1],
+              This_Structure.Residue[residue].Atom[atom].coord[2],
+              This_Structure.Residue[residue].Atom[atom].coord[3],
+              x_centre , y_centre , z_centre
+            ) ;
+
+            if( distance < 2.0 ) distance = 2.0 ;
+            if( distance >= 2.0 )
+              if( distance >= 8.0 )
+                epsilon = 80 ;
+              else
+                if( distance <= 6.0 )
+                  epsilon = 4 ;
+                else
+                  epsilon = ( 38 * distance ) - 224 ;
+
+              phi += (
+                This_Structure.Residue[residue].Atom[atom].charge /
+                (epsilon * distance)
+              );
+            }
+          }
+        }
+
+      }
+      grid[gaddress(x,y,z,grid_size)] = (fftw_real)phi;
+    }
+\end{lstlisting}
+
+El significat d'aquest codi és el següent:
+
+\begin{itemize}
+  \item Per cada punt de la graella tridimensional:
+  \item Recorrem totes les mol·lècules que hem llegit i per cadascuna d'elles:
+  \item Recorrem els àtoms d'aquesta, i a cada àtom:
+  \item En comprovem la càrrega. Si no és nul·la:
+  \item Calculem la distància entre l'àtom i el punt de la graella on estavem
+  \item Calculem el camp elèctric provocat per l'àtom en aquest punt
+  \item Finalment acumulem aquest càlcul final a la matriu de camps elèctrics
+\end{itemize}
