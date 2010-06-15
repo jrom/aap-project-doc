@@ -1,5 +1,9 @@
 %!TEX root = ../document.tex
 
-% \begin{lstlisting}[label=swap3, caption=Swap amb shuffle, language=C]
-% \end{lstlisting}
+Detectem que els accessos a dades que resideixen a la memòria dins la funció \codi{electric\_field} no són òptims, com comentem a continuació. Aquest és doncs un motiu que genera més tràfic de dades entre línies de cache de l'imprescindible. També observem que dins de \codi{pythagoras} s'efectuen operacions aritmètiques costoses com són productes i arrel quadrada en operands de coma flotant. Aquests seran els principals punts d'atac de les nostres optimitzacions, així com intentar paral·lelitzar aprofitant les capacitats dels processadors actuals.
 
+\input{chapters/opt-mem}
+\input{chapters/opt-pythagoras}
+\input{chapters/opt-sqrt}
+\input{chapters/opt-phi}
+\input{chapters/opt-threads}

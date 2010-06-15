@@ -1,0 +1,77 @@
+%!TEX root = ../document.tex
+
+\section{Accessos a memòria}
+
+Observem com s'emmagatzemen les estructures de dades a les que s'accedeix, i veiem que hi ha un array de mol·lècules que conté un array d'àtoms (entre d'altres camps) i aquest conté les seves coordenades i càrrega. Aquestes dades són les úniques que consultem (coordenades i càrrega) però estan rodejades de més informació inútil.
+
+Concretament, consultant les estructures de dades de \codi{structures.h} observem que per cada mol·lècula (amb $n$ àtoms) estem utilitzant $ n * 36 + 24$ bytes, quan només en necessitem $ n * 16 $, o sigui, 4 valors de coma flotant (3 coordenades i la càrrega).
+
+També observem en el codi de la figura \ref{ef0} que per cada àtom, només realitzem els càlculs i modifiquem el resultat si aquest té càrrega elèctrica. Això significa que per cada punt de la graella tridimensional estem accedint i comprovant els valors d'uns àtoms que MAI utilitzem.
+
+Per solucionar aquests problemes decidim copiar les dades que necessitem en posicions consecutives per optimitzar la jerarquia de memòria. Copiarem les coordenades i la càrrega de cada àtom, però només d'aquells amb càrrega elèctrica. Això ho fem al principi de la funció \codi{electric\_field} d'aquesta manera:
+
+\begin{lstlisting}[label=mem, caption=Còpia de dades per optimitzar jerarquia de memòria, language=C]
+/* cnt = sum of atoms in all the molecules */
+unsigned int cnt = 0;
+for( residue = 1 ; residue <= This_Structure.length ; residue ++ )
+  cnt += residue * This_Structure.Residue[residue].size;
+
+unsigned int atoms = 0;
+float *atom_coords, *aux_coord;
+float *atom_charges, *aux_charge;
+
+atom_coords = malloc(cnt * 3 * sizeof(float));
+atom_charges = malloc(cnt * sizeof(float));
+
+for( aux_coord = atom_coords, aux_charge = atom_charges, residue = 1 ; residue <= This_Structure.length ; residue ++ )
+{
+  for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ )
+  {
+    if( This_Structure.Residue[residue].Atom[atom].charge != 0 )
+    {
+      *aux_coord = This_Structure.Residue[residue].Atom[atom].coord[1];
+      *(aux_coord + 1) = This_Structure.Residue[residue].Atom[atom].coord[2];
+      *(aux_coord + 2) = This_Structure.Residue[residue].Atom[atom].coord[3];
+      aux_coord += 3;
+      *aux_charge = This_Structure.Residue[residue].Atom[atom].charge;
+      aux_charge++;
+      atoms++;
+    }
+  }
+}
+
+/* atoms = number of atoms with charge */
+\end{lstlisting}
+
+Com es pot veure, creem dos \emph{arrays} de \emph{floats} i només hi afegim els que tenen una càrrega positiva. Això a part de reduir l'espai de memòria que mourem entre línies de cache, permet fer menys iteracions en els bucles més interns. De fet, un cop feta aquesta reestructuració de les dades a la memòria, podem canviar radicalment els dos bucles interns de la funció per ignorar la diferenciació entre mol·lècules i àtoms, ja que no ens afecta, i simplement iterar pels àtoms de totes les mol·lècules acumulant els valors del camp elèctric en el punt en qüestió: ara només fem un bucle de \codi{atoms} iteracions, o sigui el número d'àtoms de totes les mol·lècules amb càrrega elèctrica, i que tenim emmagatzemats en posicions consecutives en els \emph{arrays} \codi{atom\_coords} i \codi{atom\_charges}.
+
+\begin{lstlisting}[label=mem2, caption=Bucle intern que substitueix els anteriors 2 bucles més interns, language=C]
+/* ... */
+aux_coord = atom_coords;
+aux_charge = atom_charges;
+for ( atom = 1; atom < atoms; atom++)
+{
+  distance = pythagoras( *aux_coord , *(aux_coord+1) , *(aux_coord+2) , x_centre , y_centre , z_centre ) ;
+  /* ... */
+\end{lstlisting}
+
+Tot i que en una versió posterior del programa s'ha canviat lleugerament la manera d'emmagatzemar aquestes dades, ho deixem per més endavant. La versió de la que s'han près mesures de temps i s'ha analitzat és la que s'ha vist ara.
+
+Tot i que aquests canvis es fan per millorar l'aprofitament de la jerarquia de memòria i reduir iteracions en els bucles interns, l'objectiu final és també situar les dades d'una manera que es puguin explotar altres tècniques com veurem més endavant.
+
+Els resultats d'aplicar només aquests canvis ja mostren que val la pena replantejar l'estratègia d'emmagatzemament, com es veu en el resultat següent:
+
+\begin{figure}[ht]
+  \caption{Resultats amb una millor organització de les dades en memòria}\label{fig:elapsed_1}
+  \begin{center}
+    \begin{tabular}{ l r r r r }
+      & test1 & test2 & test3 & total \\
+      \hline
+      Versió original & 45.5 & 174.5 & 164.3 & 384.3 \\
+      Optimització 1 & 31.2 & 119.0 & 104.9 & 255.1 \\
+    \end{tabular}
+  \end{center}
+\end{figure}
+
+Com es pot deduir dels números de la figura \ref{fig:elapsed_1}, obtenim un guany global de \textbf{1.51}, i en el millor dels casos de \textbf{1.57}.
+

@@ -1,0 +1,45 @@
+%!TEX root = ../document.tex
+
+\section{Vectorització}
+
+\subsection{Vectorització pythagoras}
+
+Després de reorganitzar les dades a la memòria, observem mitjançant \emph{profiling} que més d'una quarta part del temps perdut a \codi{electric\_field} es perd realitzant el càlcul de la distància entre dos punts mitjançant la crida a \codi{pythagoras}. Per solucionar això, decidim convertir aquest càlcul en operacions dins de la mateixa funció \codi{electric\_field} i paral·lelitzar-ne les operacions aritmètiques mitjançant vectorització.
+
+Per tal de poder aplicar vectorització en només una part del bucle intern, decidim separar aquest en dos bucles amb el mateix número d'iteracions, on el primer calcularà les distàncies per tots els àtoms i el segon, a partir d'aquest càlcul, calcularà el camp elèctric. Aquesta estratègia la seguirem utilitzant més endavant. Com que el cos del bucle té un cost computacional altíssim, l'\emph{overhead} afegit per separar-lo en dos bucles és totalment menyspreable, i en canvi les optimitzacions que això ens permet fan que aquest petit sacrifici surti molt recompensat.
+
+El que fem doncs és substituir la crida a \codi{pythagoras} per les operacions que aquesta funció efectua (suma els quadrats de les diferències entre components dels dos punts i després d'això en fa l'arrel quadrada) per operacions vectorials que permeten paral·lelitzar-les.
+
+El primer problema amb el que ens trobem és que per tal de poder fer servir operacions vectorials amb les coordenades que nosaltres hem guardat consecutivament a memòria, necessitem afegir un padding d'un byte per cada conjunt de tres coordenades, per tal de tenir alineats a 16 bytes els conjunts de coordenades. Això ens fa utilitzar una mica més d'espai però és imprescindible per fer accessos alineats a cada àtom. La modificació per això és trivial. Per altra banda, ara el càlcul de la distància també el farem per a tots els àtoms, de manera que primer establim les distàncies per tots els àtoms i a continuació en calcularem el camp elèctric:
+
+\begin{lstlisting}[label=vect1, caption=Primer dels dos bucles interns aplicant vectorització, language=C]
+aux_distance = atom_distances;
+__m128 _centers = _mm_setr_ps(x_centre, y_centre, z_centre, 0.0);
+for ( atom = 0; atom < atoms; atom++)
+{
+  __m128 *coords = (__m128*) aux_coord;
+  __m128 aux = _mm_sub_ps(*coords, _centers);
+  aux = _mm_mul_ps(aux, aux);
+  *aux_distance = sqrt( *((float*) &aux) + *((float*) (&aux)+1) + *((float*) (&aux)+2) );
+  aux_coord += 4;
+  aux_distance++;
+}
+\end{lstlisting}
+
+En aquest cas utilitzem operacions vectorials (que operen de 4 en 4 \emph{floats}) tot i que només fem cas dels tres primers. En aquest fragment del codi doncs només obtenim una paral·lelització de 3 en 3, però la millora ja s'aprecia lleugerament:
+
+\begin{figure}[ht]
+  \caption{Resultats amb una millor organització de les dades en memòria}\label{fig:elapsed_2}
+  \begin{center}
+    \begin{tabular}{ l r r r r }
+      & test1 & test2 & test3 & total \\
+      \hline
+      Versió original & 45.5 & 174.5 & 164.3 & 384.3 \\
+      Optimització 1 & 31.2 & 119.0 & 104.9 & 255.1 \\
+      Optimització 2 & 27.8 & 107.4 & 91.6 & 226.8 \\
+    \end{tabular}
+  \end{center}
+\end{figure}
+
+En aquest cas l'\textbf{speedup} global respecte el codi original és de \textbf{1.69} tot i que en el millor dels casos és de \textbf{1.79}.
+
