@@ -1,0 +1,36 @@
+\documentclass[a4paper]{report}
+\usepackage{latexjrom}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\lhead{Protein Docking}
+\rhead{\nouppercase{\leftmark}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\chaptermark}[1]{\markboth{\chaptername \ \thechapter. #1}{}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1ex plus 0.5ex minus 0.2ex}
+
+\author{Jordi Romero de Villalonga}
+\title{Projecte Final: Protein Docking \\ PCA}
+\date{16 de Juny de 2010}
+
+\begin{document}
+\maketitle
+
+\chapter{Introducció}
+\input{chapters/introduccio}
+
+\chapter{Anàlisi del programa}
+\input{chapters/analisi}
+
+\chapter{Optimitzacions}
+\input{chapters/optimitzacions}
+
+\chapter{Conclusions}
+\input{chapters/conclusions}
+
+% \chapter{}
+% \input{chapters/}
+
+\end{document}
