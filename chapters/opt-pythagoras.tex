@@ -10,7 +10,7 @@ Per tal de poder aplicar vectorització en només una part del bucle intern, dec
 
 El que fem doncs és substituir la crida a \codi{pythagoras} per les operacions que aquesta funció efectua (suma els quadrats de les diferències entre components dels dos punts i després d'això en fa l'arrel quadrada) per operacions vectorials que permeten paral·lelitzar-les.
 
-El primer problema amb el que ens trobem és que per tal de poder fer servir operacions vectorials amb les coordenades que nosaltres hem guardat consecutivament a memòria, necessitem afegir un padding d'un byte per cada conjunt de tres coordenades, per tal de tenir alineats a 16 bytes els conjunts de coordenades. Això ens fa utilitzar una mica més d'espai però és imprescindible per fer accessos alineats a cada àtom. La modificació per això és trivial. Per altra banda, ara el càlcul de la distància també el farem per a tots els àtoms, de manera que primer establim les distàncies per tots els àtoms i a continuació en calcularem el camp elèctric:
+El primer problema amb el que ens trobem és que per tal de poder fer servir operacions vectorials amb les coordenades que nosaltres hem guardat consecutivament a memòria, necessitem afegir un padding d'un byte per cada conjunt de tres coordenades, per tal de tenir alineats a 16 bytes els conjunts de coordenades. Això ens fa utilitzar una mica més d'espai però és imprescindible per fer accessos alineats a cada àtom. La modificació per això és trivial. També cal pensar en reservar la memòria alineada a 16 bytes mitjançant la funció \codi{posix\_memalign}. Per altra banda, ara el càlcul de la distància també el farem per a tots els àtoms, de manera que primer establim les distàncies per tots els àtoms i a continuació en calcularem el camp elèctric:
 
 \begin{lstlisting}[label=vect1, caption=Primer dels dos bucles interns aplicant vectorització, language=C]
 aux_distance = atom_distances;
@@ -36,7 +36,7 @@ En aquest cas utilitzem operacions vectorials (que operen de 4 en 4 \emph{floats
       \hline
       Versió original & 45.5 & 174.5 & 164.3 & 384.3 \\
       Optimització 1 & 31.2 & 119.0 & 104.9 & 255.1 \\
-      Optimització 2 & 27.8 & 107.4 & 91.6 & 226.8 \\
+      \textbf{Optimització 2} & 27.8 & 107.4 & 91.6 & 226.8 \\
     \end{tabular}
   \end{center}
 \end{figure}

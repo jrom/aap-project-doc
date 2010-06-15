@@ -51,13 +51,9 @@ for( x = 0 ; x < grid_size ; x ++ )
                 epsilon = 80 ;
               else
                 if( distance <= 6.0 )
-                {
                   epsilon = 4 ;
-                }
                 else
-                {
                   epsilon = ( 38 * distance ) - 224 ;
-                }
               phi += (This_Structure.Residue[residue].Atom[atom].charge / (epsilon * distance));
             }
           }
@@ -88,9 +84,7 @@ Com hem comentat prèviament, es mesura només el temps d'execució real entre d
 \begin{lstlisting}[label=timer, caption=Mesura del temps d'execució real, language=C]
 struct timeval start, end;
 gettimeofday(&start, NULL);
-
 /* ... timed code ... */
-
 gettimeofday(&end, NULL);
 float elapsed = (end.tv_sec + (end.tv_usec / 1000000.0)) -
                 (start.tv_sec + (start.tv_usec / 1000000.0));
@@ -108,9 +102,9 @@ En una primera execució del programa, sense haver fet encara cap modificació e
     \begin{tabular}{ l r r r r }
       & test1 & test2 & test3 & total \\
       \hline
-      Versió original & 45.5 & 174.5 & 164.3 & 384.3 \\
+      \textbf{Versió original} & 45.5 & 174.5 & 164.3 & 384.3 \\
     \end{tabular}
   \end{center}
 \end{figure}
 
-Cada execució que es mostri a partir d'ara, a l'igual que aquesta, serà el resultat d'executar per a una versió específica del programa amb els tres jocs de proves proporcionats i iterant 5 vegades cada prova. Els valors mostrats són les mitjanes d'aquestes execucions. Quan parlem de guany, sempre ho farem respecte a aquests temps d'execució.
+Cada execució que es mostri a partir d'ara, a l'igual que aquesta, serà el resultat d'executar per a una versió específica del programa amb els tres jocs de proves proporcionats i iterant 5 vegades cada prova. Els valors mostrats són les mitjanes d'aquestes execucions. Quan parlem de guany, sempre ho farem respecte a aquests temps d'execució. Ens referirem al guany global com a diferència de temps \textbf{total}, per tant transversal als tres jocs de proves. Quan parlem del millor dels casos serà amb un joc de proves individual, que pugui donar uns resultats diferents al valor global.

@@ -1,1 +1,17 @@
 %!TEX root = ../document.tex
+
+Com hem anat veient en els diferents apartats dins el capítol d'Optimitzacions, el temps d'execució real ha anat disminuit més o menys linealment. Les optimitzacions s'han anat introduint esglaonadament, de manera que no hi ha hagut cap canvi sobtat, tot i que les dues darreres han estat les que han tingut més impacte ja que s'ha pogut paral·lelitzar moltes operacions.
+
+A la figura \ref{fig:{img/elapseds.png}} podem veure la progressió de l'elapsed time per cadascun dels tres tests:
+
+\imatge{img/elapseds.png}{Elapsed time per cadascun dels tres tests en tots els passos}
+
+Aquesta retallada de temps d'execució es converteix en un \textbf{speedup} global (o sigui, executant els tres jocs de proves) de \textbf{4.53}, tot i que si ens quedem només amb el joc de proves tres, l'speedup entre la versió original i la final és de \textbf{5.87}.
+
+A la figura \ref{fig:{img/speedup_global.png}} mostrem l'evolució de l'speedup amb els diferents jocs de proves:
+
+\imatge{img/speedup_global.png}{Speedup global per a totes les versions del programa}
+
+Tot i que com hem comentat, si ens quedem només amb el joc de proves número tres, encara s'aprecien millor resultats, com es pot apreciar a la figura \ref{fig:{img/speedup_best.png}}:
+
+\imatge{img/speedup_best.png}{Speedup de test3 per a totes les versions del programa}

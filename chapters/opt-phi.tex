@@ -1,3 +1,56 @@
 %!TEX root = ../document.tex
 
-\subsection{Vectorització phi}
+\subsection{Unroll i vectorització del càlcul de phi}
+
+Anàlogament, apliquem la mateixa tècnica en un altre càlcul costós que estem realitzant per cada àtom: el camp elèctric provocat.
+
+Com que tenim el càlcul que implica multiplicacions i divisions, decidim paral·lelitzarles mitjançant vectorització, així que també apliquem unrolling de grau 4:
+
+\begin{lstlisting}[label=vect3, caption=Unrolling i vectorització de phi, language=C]
+aux_distance = atom_distances;
+aux_charge = atom_charges;
+for ( atom = 0; atom < atoms; atom += 4)
+{
+  /* ... if's pels quatre atoms: definim epsilon1, 2, 3 i 4 ... '*/
+  __m128 epsilons = _mm_setr_ps( epsilon1, epsilon2, epsilon3, epsilon4);
+  epsilons = _mm_mul_ps(epsilons, *((__m128*) aux_distance));
+  epsilons = _mm_div_ps(*((__m128*) aux_charge), epsilons);
+  phi += (*((float*) &epsilons) + *((float*) (&epsilons)+1) + *((float*) (&epsilons)+2) + *((float*) (&epsilons)+3));
+  aux_charge += 4; aux_distance += 4;
+}
+for (; atom < atoms; atom++)
+{
+  if( *aux_distance < 2.0 ) *aux_distance = 2.0 ;
+  if( *aux_distance >= 8.0 )
+    epsilon = 80 ;
+  else
+    if( *aux_distance <= 6.0 )
+      epsilon = 4 ;
+    else
+      epsilon = ( 38 * *aux_distance ) - 224 ;
+  phi += ( *aux_charge / ( epsilon * (*aux_distance) ) ) ;
+  aux_charge++; aux_distance++;
+}
+\end{lstlisting}
+
+En el codi de la figura \ref{vect3} es realitzen exactament les mateixes operacions en els dos bucles, amb la diferència que en el primer (a part de que s'han eliminat els if's per compactar el codi en aquest document) s'opera sempre de quatre en quatre. Aquest paral·lelisme que ens ofereix la vectorització permet assolir uns temps d'execució inferiors, com podem observar:
+
+
+\begin{figure}[ht]
+  \caption{Resultats amb una millor organització de les dades en memòria}\label{fig:elapsed_4}
+  \begin{center}
+    \begin{tabular}{ l r r r r }
+      & test1 & test2 & test3 & total \\
+      \hline
+      Versió original & 45.5 & 174.5 & 164.3 & 384.3 \\
+      Optimització 1 & 31.2 & 119.0 & 104.9 & 255.1 \\
+      Optimització 2 & 27.8 & 107.4 & 91.6 & 226.8 \\
+      Optimització 3 & 22.2 & 84.2 & 68.3 & 174.7 \\
+      \textbf{Optimització 4} & 16.1 & 60.6 & 43.9 & 120.6 \\
+    \end{tabular}
+  \end{center}
+\end{figure}
+
+Aquests temps, traduits a \textbf{speedup}, tenim que en el cas global estem executant el codi \textbf{3.19} vegades més ràpid, i en el cas millor \textbf{3.74}.
+
+A part dels canvis d'unroll bàsic i el posterior ús d'instruccions vectorials, s'han reordenat les operacions que podíen causar dependències, però com que la millora no ha estat molt notable no es contemplen individualment. El resultat però inclou aquestes reordenacions.

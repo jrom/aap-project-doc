@@ -1,3 +1,69 @@
 %!TEX root = ../document.tex
 
 \section{Paral·lelització amb threads}
+
+Per tal d'aprofitar al màxim les característiques dels processadors actuals, cal fer que el programa sigui capaç de dividir-se càrrega de treball entre els diferents nuclis de procés de que disposa l'ordinador. Per fer això usarem threads mitjançant la implementació \textbf{pthreads}.
+
+De cara a poder usar aquesta tècnica, hem extret de la funció \codi{electric\_field} tota la part corresponent als bucles en una nova funció: \codi{electric\_field\_partial}. D'aquesta manera podem des de la funció principal inicialitzar les dades que necessitem com ara la còpia de les coordenades dels àtoms o les seves càrregues en vectors compactes i alineats a 16 bytes, etc. Les variables que necessitem que la segona funció llegeixi les fem globals. En aquest cas la funció que volem paral·lelitzar \textbf{només modificarà una variable global}, i per cada punt de la graella \textbf{accedirà a una posició diferent}, per tant \textbf{no cal usar mutex} per garantir que no hi ha conflictes en aquests accessos.
+
+El codi resultant de la funció principal on cridem a la funció auxiliar que farà tot el càlcul és el seguent:
+
+\begin{lstlisting}[label=threads, caption=Creació de threads, language=C]
+pthread_t threads[NT];
+int rc, t;
+
+for(t = 0; t < NT; t++)
+{
+  rc = pthread_create(&threads[t], NULL, electric_field_partial, (void *) t);
+  if (rc)
+  {
+    printf("ERROR CREATING THREAD (%d) = %d\n", t, rc);
+    exit(-1);
+  }
+}
+
+for(t = 0; t < NT; t++)
+{
+  if (rc = pthread_join(threads[t], NULL))
+  {
+    printf("ERROR JOINING THREAD (%d) = %d\n", t, rc);
+    exit(0);
+  }
+}
+\end{lstlisting}
+
+Com es pot veure, passem un únic paràmetre que és l'identificador del thread, perquè així a la funció auxiliar es pugui saber quin fragment de les dades ha de processar. Hem decidit dividir la càrrega de treball a partir de separar els fragments del bucle més extern a processar. D'aquesta manera tots els threads tindran una càrrega de treball igual, ja que independentment del punt on es processi cal fer els mateixos càlculs. El codi que discrimina això a la funció auxiliar és el següent:
+
+\begin{lstlisting}[label=threads2, caption=Divisió de feina a cada thread, language=C]
+int x_from, x_to;
+x_from = tid * (g_grid_size / NT);
+x_to = (tid+1) * (g_grid_size / NT);
+if (tid == NT - 1) x_to = g_grid_size;
+
+for( x = x_from ; x < x_to ; x ++ )
+{
+  printf( "." ) ;
+  /* ... tot segueix igual ...*/
+\end{lstlisting}
+
+On \codi{NT} és el número de threads, que s'ha fixat en 16 ja que és el valor que millor resultats ha mostrat a diferents màquines, tot i que la millora respecte un número més baix com 4 és molt poc notable en un processador Core 2 Duo, en un Core i7 amb quatre cores i hyper-threading la millora sí que es nota molt.
+
+El resultat final del programa és el que podem mesurar ara, i mostrem la taula completa de temps d'execució a continuació:
+
+\begin{figure}[ht]
+  \caption{Resultats amb una millor organització de les dades en memòria}\label{fig:elapsed_5}
+  \begin{center}
+    \begin{tabular}{ l r r r r }
+      & test1 & test2 & test3 & total \\
+      \hline
+      Versió original & 45.5 & 174.5 & 164.3 & 384.3 \\
+      Optimització 1 & 31.2 & 119.0 & 104.9 & 255.1 \\
+      Optimització 2 & 27.8 & 107.4 & 91.6 & 226.8 \\
+      Optimització 3 & 22.2 & 84.2 & 68.3 & 174.7 \\
+      Optimització 4 & 16.1 & 60.6 & 43.9 & 120.6 \\
+      \textbf{Optimització 5} & 11.6 & 45.2 & 28.0 & 84.8 \\
+    \end{tabular}
+  \end{center}
+\end{figure}
+
+En la darrera optimització, el guany global és de \textbf{4.53}, tot i que si ens quedem només amb el test 3 el guany observat és de \textbf{5.87}.
